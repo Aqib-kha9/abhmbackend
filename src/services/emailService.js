@@ -27,7 +27,10 @@ const transporter = nodemailer.createTransport({
 // Helper: Generate PDF Buffer for ID Card
 const generateIdCardPdf = async (member) => {
     try {
-        const browser = await puppeteer.launch({ headless: 'new' });
+        const browser = await puppeteer.launch({ 
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
         const page = await browser.newPage();
 
         // Icons as inline SVGs (Lucide)

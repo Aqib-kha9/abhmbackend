@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import Admin from './src/models/Admin.js';
+import Member from './src/models/Member.js';
 import connectDB from './src/config/db.js';
 
 dotenv.config();
@@ -9,13 +10,11 @@ const seedAdmin = async () => {
     try {
         await connectDB();
 
-        // Check if admin exists
-        const adminExists = await Admin.findOne({ username: 'admin' });
-
-        if (adminExists) {
-            console.log('Admin user already exists');
-            process.exit();
-        }
+        console.log('Cleaning database...');
+        // Delete all existing members and admins
+        await Member.deleteMany({});
+        await Admin.deleteMany({});
+        console.log('Database cleaned successfully');
 
         const admin = new Admin({
             username: 'admin',
