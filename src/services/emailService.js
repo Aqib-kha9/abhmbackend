@@ -40,20 +40,50 @@ const generateIdCardPdf = async (member) => {
             shield: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>`
         };
 
-        // Read Logo Image as base64
+        // Read Logo Image as base64 with multiple path fallbacks
         let logoBase64 = '';
         let flagBase64 = '';
-        try {
-            const logoPath = path.join(__dirname, '../../../public/abhmlogo.jpg');
-            const logoData = fs.readFileSync(logoPath);
-            logoBase64 = `data:image/jpeg;base64,${logoData.toString('base64')}`;
+        
+        const tryReadImage = (fileName) => {
+            const possiblePaths = [
+                path.join(__dirname, '../assets', fileName),      // Backend assets (NEW)
+                path.join(__dirname, '../../../public', fileName), // Local dev: root/public
+                path.join(process.cwd(), 'public', fileName),      // Root check
+                path.join(process.cwd(), '../public', fileName),   // Backend separate check
+                path.join(__dirname, '../../public', fileName),    // Alternative relative
+                path.join(process.cwd(), '../', fileName),         // Direct root
+                path.join('/var/www/abhm/public', fileName)        // Common linux server path
+            ];
 
-            const flagPath = path.join(__dirname, '../../../public/abhmflag.png');
-            const flagData = fs.readFileSync(flagPath);
-            flagBase64 = `data:image/png;base64,${flagData.toString('base64')}`;
-        } catch (e) {
-            console.error("Could not read images for PDF:", e);
-        }
+            for (const imgPath of possiblePaths) {
+                try {
+                    if (fs.existsSync(imgPath)) {
+                        const data = fs.readFileSync(imgPath);
+                        console.log(`[EmailService] Successfully loaded ${fileName} from: ${imgPath}`);
+                        return data;
+                    }
+                } catch (err) {
+                    // Try next path
+                }
+            }
+            console.error(`[EmailService] FAILED to load ${fileName} from all attempted paths.`);
+            return null;
+        };
+
+        // Get Base64 for an image (filesystem first, then URL fallback)
+        const getBase64Image = async (fileName) => {
+            const data = tryReadImage(fileName);
+            if (data) return `data:image/${fileName.endsWith('.png') ? 'png' : 'jpeg'};base64,${data.toString('base64')}`;
+            
+            // Fallback to URL if filesystem fails
+            const apiUrl = process.env.API_URL || 'http://localhost:5000';
+            const publicUrl = `${apiUrl}/${fileName}`;
+            console.log(`[EmailService] Attempting URL fallback for ${fileName}: ${publicUrl}`);
+            return publicUrl;
+        };
+
+        logoBase64 = await getBase64Image('abhmlogo.jpg');
+        flagBase64 = await getBase64Image('abhmflag.png');
 
         const htmlContent = `
         <!DOCTYPE html>
