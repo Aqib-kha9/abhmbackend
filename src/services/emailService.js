@@ -40,6 +40,21 @@ const generateIdCardPdf = async (member) => {
             shield: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>`
         };
 
+        // Read Logo Image as base64
+        let logoBase64 = '';
+        let flagBase64 = '';
+        try {
+            const logoPath = path.join(__dirname, '../../../public/abhmlogo.jpg');
+            const logoData = fs.readFileSync(logoPath);
+            logoBase64 = `data:image/jpeg;base64,${logoData.toString('base64')}`;
+
+            const flagPath = path.join(__dirname, '../../../public/abhmflag.png');
+            const flagData = fs.readFileSync(flagPath);
+            flagBase64 = `data:image/png;base64,${flagData.toString('base64')}`;
+        } catch (e) {
+            console.error("Could not read images for PDF:", e);
+        }
+
         const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -56,37 +71,37 @@ const generateIdCardPdf = async (member) => {
                 }
 
                 .page-container {
-                    padding: 40px;
+                    padding: 20mm;
                     display: flex;
                     flex-direction: column;
-                    gap: 40px;
+                    gap: 15mm;
                     align-items: center;
+                    background: #f3f4f6;
+                    min-height: 297mm;
                 }
 
-                /* Exact Dimensions from Component: w-[380px] h-[240px] */
+                /* Exact Dimensions from standard ID Card (CR80): 85.6mm x 53.98mm */
                 .card-container {
-                    width: 380px;
-                    height: 240px;
+                    width: 85.6mm;
+                    height: 53.98mm;
                     background: #fff;
                     border-radius: 16px;
-                    overflow: hidden;
                     position: relative;
                     border: 1px solid rgba(0,0,0,0.1);
-                    /* box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); */ /* Shadow removed for print clarity */
-                    page-break-inside: avoid;
                     display: flex;
                     flex-direction: column;
+                    overflow: hidden;
                 }
 
                 /* --- HEADER --- */
                 .header {
-                    height: 32px;
+                    height: 24px;
                     background: #000;
                     position: relative;
-                    padding: 0 24px;
+                    padding: 0 20px;
                     display: flex;
                     align-items: center;
-                    gap: 12px;
+                    gap: 8px;
                     overflow: hidden;
                     flex-shrink: 0;
                 }
@@ -95,26 +110,36 @@ const generateIdCardPdf = async (member) => {
                     position: absolute;
                     top: 0;
                     right: 0;
-                    width: 160px;
+                    width: 120px;
                     height: 100%;
                     background: #FF6B00;
-                    transform: skewX(-30deg) translateX(48px);
+                    transform: skewX(-30deg) translateX(40px);
                     opacity: 0.9;
-                }
-
-                .logo-box {
-                    width: 32px;
-                    height: 32px;
-                    background: #fff;
-                    border-radius: 8px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-weight: 900;
-                    font-size: 14px;
-                    color: #000;
+                }
+
+                .header-flag-img {
+                    height: 38px;
+                    width: auto;
+                    transform: skewX(30deg) translateX(-12px) translateY(6px);
+                }
+
+                .logo-box {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 4px;
+                    overflow: hidden;
                     z-index: 10;
                     flex-shrink: 0;
+                    background: #fff;
+                }
+
+                .logo-img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
                 }
 
                 .header-text-col {
@@ -124,7 +149,7 @@ const generateIdCardPdf = async (member) => {
                 }
                 
                 .header-main-text {
-                    font-size: 10px;
+                    font-size: 7.5px;
                     font-weight: 900;
                     color: #fff;
                     text-transform: uppercase;
@@ -133,7 +158,7 @@ const generateIdCardPdf = async (member) => {
                 }
 
                 .header-sub-text {
-                    font-size: 13px;
+                    font-size: 10px;
                     font-weight: 900;
                     color: #FF6B00;
                     text-transform: uppercase;
@@ -146,24 +171,24 @@ const generateIdCardPdf = async (member) => {
                 .body-row {
                     flex: 1;
                     display: flex;
-                    padding: 8px 16px; /* p-2 gap-4 in component, adjusted slightly for PDF rendering */
-                    gap: 16px;
+                    padding: 10px 12px;
+                    gap: 12px;
                 }
 
                 /* Photo Column */
                 .photo-col {
-                    width: 96px;
+                    width: 80px;
                     display: flex;
                     flex-direction: column;
-                    gap: 8px;
+                    gap: 6px;
                     flex-shrink: 0;
                 }
 
                 .photo-frame {
-                    width: 96px;
-                    height: 112px;
+                    width: 80px;
+                    height: 96px;
                     background: #f3f4f6;
-                    border-radius: 12px;
+                    border-radius: 10px;
                     border: 2px solid rgba(255, 107, 0, 0.2);
                     overflow: hidden;
                     position: relative;
@@ -207,7 +232,7 @@ const generateIdCardPdf = async (member) => {
                 }
 
                 .name-text {
-                    font-size: 14px;
+                    font-size: 11px;
                     font-weight: 900;
                     color: #000;
                     text-transform: uppercase;
@@ -215,46 +240,46 @@ const generateIdCardPdf = async (member) => {
                 }
 
                 .designation-text {
-                    font-size: 9px;
+                    font-size: 7.5px;
                     font-weight: 900;
                     color: #FF6B00;
                     text-transform: uppercase;
                     letter-spacing: 0.1em;
-                    margin-bottom: 8px;
+                    margin-bottom: 4px;
                 }
 
                 .detail-row {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
-                    margin-bottom: 2px; /* Very tight spacing */
+                    gap: 6px;
+                    margin-bottom: 2px;
                 }
 
                 .detail-label {
-                    width: 32px; /* Fixed width for labels S/O, DOB */
-                    font-size: 8px;
+                    width: 28px;
+                    font-size: 7px;
                     font-weight: 900;
-                    color: #9ca3af; /* gray-400 */
+                    color: #9ca3af;
                     text-transform: uppercase;
                 }
 
                 .detail-value {
                     flex: 1;
-                    font-size: 9px;
+                    font-size: 8px;
                     font-weight: 700;
-                    color: #374151; /* gray-700 */
+                    color: #374151;
                     text-transform: uppercase;
                 }
 
                 .addr-row {
                     display: flex;
                     align-items: start;
-                    gap: 8px;
+                    gap: 6px;
                     margin-bottom: 2px;
                 }
                 .addr-label {
-                    width: 32px;
-                    font-size: 8px;
+                    width: 28px;
+                    font-size: 7px;
                     font-weight: 900;
                     color: #9ca3af;
                     text-transform: uppercase;
@@ -262,9 +287,9 @@ const generateIdCardPdf = async (member) => {
                 }
                 .addr-value {
                     flex: 1;
-                    font-size: 8px;
+                    font-size: 6.5px;
                     font-weight: 700;
-                    color: #6b7280; /* gray-500 */
+                    color: #6b7280;
                     text-transform: uppercase;
                     line-height: 1.1;
                     overflow: hidden;
@@ -304,8 +329,8 @@ const generateIdCardPdf = async (member) => {
 
                 /* --- FOOTER --- */
                 .footer {
-                    height: 48px;
-                    background: #f9fafb; /* gray-50 */
+                    height: 36px;
+                    background: #f9fafb;
                     border-top: 1px solid rgba(0,0,0,0.05);
                     padding: 0 24px;
                     display: flex;
@@ -320,22 +345,27 @@ const generateIdCardPdf = async (member) => {
                 }
                 .footer-box.right {
                     text-align: right;
+                    padding-bottom: 8px;
                 }
 
                 .footer-label {
-                    font-size: 7px;
+                    font-size: 6px;
                     font-weight: 900;
-                    color: #9ca3af; /* gray-400 */
+                    color: #9ca3af;
                     text-transform: uppercase;
                     letter-spacing: 0.2em;
                 }
 
                 .footer-value {
-                    font-size: 9px;
+                    font-size: 7.5px;
                     font-weight: 900;
                     color: #000;
                     text-transform: uppercase;
                     letter-spacing: -0.02em;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 120px;
                 }
                 .footer-value.orange {
                     color: #FF6B00;
@@ -349,22 +379,23 @@ const generateIdCardPdf = async (member) => {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    opacity: 0.03;
+                    opacity: 0.05;
                     pointer-events: none;
                 }
-                .watermark-text {
-                    font-size: 180px;
-                    font-weight: 900;
-                    color: #000;
+                .watermark-img {
+                    width: 160px;
+                    height: 160px;
+                    object-fit: contain;
                 }
 
                 .back-body {
                     flex: 1;
                     display: flex;
-                    padding: 16px;
-                    gap: 24px;
+                    padding: 10px 15px;
+                    gap: 12px;
                     position: relative;
                     z-index: 5;
+                    align-items: center;
                 }
 
                 .instructions-col {
@@ -375,13 +406,13 @@ const generateIdCardPdf = async (member) => {
                 }
 
                 .instr-header {
-                    font-size: 10px;
+                    font-size: 9px;
                     font-weight: 900;
                     color: #000;
                     text-transform: uppercase;
                     letter-spacing: 0.1em;
-                    margin-bottom: 12px;
-                    padding-bottom: 4px;
+                    margin-bottom: 8px;
+                    padding-bottom: 2px;
                     border-bottom: 1px solid rgba(0,0,0,0.05);
                     width: fit-content;
                 }
@@ -398,7 +429,7 @@ const generateIdCardPdf = async (member) => {
                     display: flex;
                     align-items: start;
                     gap: 6px;
-                    font-size: 7px;
+                    font-size: 6px;
                     font-weight: 700;
                     color: #6b7280; /* gray-500 */
                     text-transform: uppercase;
@@ -415,22 +446,22 @@ const generateIdCardPdf = async (member) => {
                 }
 
                 .qr-col {
-                    width: 96px;
+                    width: 72px;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     justify-content: center;
                     text-align: center;
-                    gap: 8px;
+                    gap: 6px;
                 }
 
                 .qr-img {
-                    width: 64px;
-                    height: 64px;
+                    width: 56px;
+                    height: 56px;
                 }
 
                 .qr-text {
-                    font-size: 6px;
+                    font-size: 5px;
                     font-weight: 900;
                     color: #9ca3af;
                     text-transform: uppercase;
@@ -439,7 +470,7 @@ const generateIdCardPdf = async (member) => {
                 }
 
                 .back-footer {
-                    height: 80px; /* h-20 */
+                    height: 64px;
                     background: #f9fafb;
                     border-top: 1px solid rgba(0,0,0,0.05);
                     padding: 0 32px;
@@ -457,22 +488,22 @@ const generateIdCardPdf = async (member) => {
                 }
                 
                 .sig-box {
-                    height: 40px; /* h-10 */
-                    width: 128px; /* w-32 */
+                    height: 28px;
+                    width: 100px;
                     border-bottom: 1px solid rgba(0,0,0,0.2);
                     position: relative;
                 }
                 
                 .sig-watermark {
                     position: absolute;
-                    top: 4px;
-                    left: 8px;
+                    top: 2px;
+                    left: 6px;
                     opacity: 0.1;
                     color: #000;
                 }
 
                 .sig-label {
-                    font-size: 7px;
+                    font-size: 6px;
                     font-weight: 900;
                     color: #9ca3af;
                     text-transform: uppercase;
@@ -486,14 +517,14 @@ const generateIdCardPdf = async (member) => {
                 }
                 
                 .bf-title {
-                    font-size: 9px;
+                    font-size: 8px;
                     font-weight: 900;
                     color: #000;
                     text-transform: uppercase;
                     letter-spacing: -0.02em;
                 }
                 .bf-sub {
-                    font-size: 7px;
+                    font-size: 6px;
                     font-weight: 700;
                     color: #FF6B00;
                     text-transform: uppercase;
@@ -502,12 +533,12 @@ const generateIdCardPdf = async (member) => {
                     margin-top: 2px;
                 }
                 .bf-link {
-                    font-size: 6px;
+                    font-size: 5px;
                     font-weight: 700;
                     color: #9ca3af;
                     text-transform: uppercase;
                     letter-spacing: 0.1em;
-                    margin-top: 8px;
+                    margin-top: 6px;
                     text-decoration: underline;
                 }
                 
@@ -520,8 +551,12 @@ const generateIdCardPdf = async (member) => {
                 <div class="card-container">
                     <!-- Header -->
                     <div class="header">
-                        <div class="header-saffron-block"></div>
-                        <div class="logo-box">ॐ</div>
+                        <div class="header-saffron-block">
+                            <img src="${flagBase64}" class="header-flag-img" />
+                        </div>
+                        <div class="logo-box">
+                            <img src="${logoBase64}" class="logo-img" />
+                        </div>
                         <div class="header-text-col">
                             <span class="header-main-text">Akhil Bharatiya Hindu Mahasabha</span>
                             <span class="header-sub-text">Madhya Pradesh Unit</span>
@@ -550,14 +585,14 @@ const generateIdCardPdf = async (member) => {
 
                         <!-- Details -->
                         <div class="details-col">
-                            <div style="margin-bottom: 8px;">
-                                <div class="name-text">${member.firstName} ${member.lastName}</div>
-                                <div class="designation-text">Sangathan Sadasya</div>
+                            <div style="margin-bottom: 4px;">
+                                <div class="name-text">${member.name || `${member.firstName} ${member.lastName}`}</div>
+                                <div class="designation-text">${member.designation || 'Sangathan Sadasya'}</div>
                             </div>
                             
                             <div class="detail-row">
                                 <span class="detail-label">S/O:</span>
-                                <span class="detail-value">${member.fatherHusbandName || 'N/A'}</span>
+                                <span class="detail-value">${member.fatherName || member.fatherHusbandName || 'N/A'}</span>
                             </div>
                             <div class="detail-row">
                                 <span class="detail-label">DOB:</span>
@@ -607,7 +642,7 @@ const generateIdCardPdf = async (member) => {
                 <!-- BACK CARD -->
                 <div class="card-container">
                     <div class="watermark-container">
-                        <div class="watermark-text">ॐ</div>
+                        <img src="${logoBase64}" class="watermark-img" />
                     </div>
 
                     <div class="back-body">
@@ -653,11 +688,11 @@ const generateIdCardPdf = async (member) => {
 
         await page.setContent(htmlContent);
         
-        // Use a standard A4 or flexible size, but fit content
+        // Use standard A4 size for the PDF to fit both cards on one page
         const pdfBuffer = await page.pdf({ 
-            width: '500px', 
-            height: '800px',
-            printBackground: true 
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '5mm', right: '5mm', bottom: '5mm', left: '5mm' }
         });
         
         await browser.close();

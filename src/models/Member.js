@@ -59,7 +59,7 @@ const memberSchema = new mongoose.Schema({
     payment: {
         amount: { type: Number, required: true, default: 10 },
         utrNumber: { type: String, required: true, trim: true },
-        screenshotUrl: { type: String, required: true }, // Path to uploaded payment screenshot
+        screenshotUrl: { type: String, required: false }, // Path to uploaded payment screenshot
         timestamp: { type: Date, default: Date.now }
     },
 

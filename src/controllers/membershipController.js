@@ -52,10 +52,6 @@ export const registerMember = async (req, res) => {
         const aadhaarCardPath = req.files['aadhaarCard'] ? req.files['aadhaarCard'][0].path.replace(/\\/g, "/") : null;
         const screenshotPath = req.files['paymentScreenshot'] ? req.files['paymentScreenshot'][0].path.replace(/\\/g, "/") : null;
 
-        if (!screenshotPath) {
-            return res.status(400).json({ message: 'Payment screenshot is required.' });
-        }
-
         // Parse Addresses if they come as strings (from FormData)
         let parsedPresentAddress = presentAddress;
         let parsedPermanentAddress = permanentAddress;
