@@ -81,6 +81,23 @@ export const generateIdCardHtml = async (member) => {
         flagBase64 = await getBase64Image('abhmflag.png');
         sigBase64 = await getBase64Image('signature.png');
 
+        let memberPhotoBase64 = null;
+        if (member.photoUrl) {
+            try {
+                // Ensure we look in the right place relative to backend root
+                const photoPath = path.isAbsolute(member.photoUrl) 
+                    ? member.photoUrl 
+                    : path.join(process.cwd(), member.photoUrl);
+                
+                if (fs.existsSync(photoPath)) {
+                    const data = fs.readFileSync(photoPath);
+                    memberPhotoBase64 = `data:image/${photoPath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg'};base64,${data.toString('base64')}`;
+                }
+            } catch (err) {
+                console.error("[EmailService] Error processing member photo for ID card:", err.message);
+            }
+        }
+
         const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -596,8 +613,8 @@ export const generateIdCardHtml = async (member) => {
                         <!-- Photo -->
                         <div class="photo-col">
                             <div class="photo-frame">
-                                ${member.photoUrl ? 
-                                    `<img src="${process.env.API_URL || 'http://localhost:5000'}/${member.photoUrl}" class="photo-img" />` : 
+                                ${memberPhotoBase64 ? 
+                                    `<img src="${memberPhotoBase64}" class="photo-img" />` : 
                                     `<div class="no-photo-placeholder">
                                         <div style="opacity:0.2; transform: scale(1.5);">
                                             ${icons.shield}
