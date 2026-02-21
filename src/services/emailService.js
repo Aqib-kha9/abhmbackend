@@ -128,7 +128,7 @@ const generateIdCardPdf = async (member) => {
                     height: 24px;
                     background: #000;
                     position: relative;
-                    padding: 0 20px;
+                    padding: 0 12px;
                     display: flex;
                     align-items: center;
                     gap: 8px;
@@ -323,6 +323,7 @@ const generateIdCardPdf = async (member) => {
                     text-transform: uppercase;
                     line-height: 1.1;
                     padding-left: 1px;
+                    margin-top: 1.2px;
                     overflow: hidden;
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
@@ -363,7 +364,7 @@ const generateIdCardPdf = async (member) => {
                     height: 36px;
                     background: #f9fafb;
                     border-top: 1px solid rgba(0,0,0,0.05);
-                    padding: 0 24px;
+                    padding: 0 12px;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
