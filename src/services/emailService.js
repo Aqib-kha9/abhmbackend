@@ -503,7 +503,7 @@ const generateIdCardPdf = async (member) => {
                     height: 64px;
                     background: #f9fafb;
                     border-top: 1px solid rgba(0,0,0,0.05);
-                    padding: 0 32px;
+                    padding: 0 15px;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
