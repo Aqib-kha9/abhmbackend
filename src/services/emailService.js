@@ -322,6 +322,7 @@ const generateIdCardPdf = async (member) => {
                     color: #6b7280;
                     text-transform: uppercase;
                     line-height: 1.1;
+                    padding-left: 1px;
                     overflow: hidden;
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
@@ -718,6 +719,9 @@ const generateIdCardPdf = async (member) => {
 
         await page.setContent(htmlContent);
         
+        // Boost resolution for crystal clear 4K-like quality in PDF
+        await page.setViewport({ width: 1200, height: 1600, deviceScaleFactor: 4 });
+
         // Use standard A4 size for the PDF to fit both cards on one page
         const pdfBuffer = await page.pdf({ 
             format: 'A4',
