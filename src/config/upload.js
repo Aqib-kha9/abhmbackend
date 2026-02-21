@@ -10,7 +10,19 @@ if (!fs.existsSync(uploadDir)) {
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir);
+        // Create dynamic path: uploads/[fieldname]/[YYYY-MM]
+        const date = new Date();
+        const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const folderName = file.fieldname || 'others';
+        
+        const dynamicDir = path.join('uploads', folderName, yearMonth);
+        
+        // Ensure the dynamic directory exists
+        if (!fs.existsSync(dynamicDir)) {
+            fs.mkdirSync(dynamicDir, { recursive: true });
+        }
+        
+        cb(null, dynamicDir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
