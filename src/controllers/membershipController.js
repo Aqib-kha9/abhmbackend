@@ -44,7 +44,13 @@ export const registerMember = async (req, res) => {
         });
 
         if (existingMember) {
-            return res.status(400).json({ message: 'Member with this Mobile, Aadhaar, or UTR already exists.' });
+            if (existingMember.status === 'rejected') {
+                // Instead of blocking, we delete the old rejected record so they can re-apply cleanly.
+                console.log(`[registerMember] Found existing rejected record for ${mobile}. Deleting to allow re-application.`);
+                await Member.deleteOne({ _id: existingMember._id });
+            } else {
+                return res.status(400).json({ message: 'Member with this Mobile, Aadhaar, or UTR already exists and is not rejected.' });
+            }
         }
 
         // Handle File Uploads
@@ -116,9 +122,33 @@ export const registerMember = async (req, res) => {
 // @access  Private (Admin)
 export const getPendingRequests = async (req, res) => {
     try {
-        const members = await Member.find({ status: 'pending' }).sort({ createdAt: -1 });
-        res.json(members);
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const search = req.query.search || '';
+
+        let query = { status: 'pending' };
+        if (search) {
+            query.$or = [
+                { firstName: { $regex: search, $options: 'i' } },
+                { lastName: { $regex: search, $options: 'i' } },
+                { mobile: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const totalCount = await Member.countDocuments(query);
+        const members = await Member.find(query)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        res.json({
+            data: members,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page
+        });
     } catch (error) {
+        console.error("Error fetching requests:", error);
         res.status(500).json({ message: 'Error fetching requests.' });
     }
 };
@@ -200,9 +230,39 @@ export const verifyRequest = async (req, res) => {
 export const getMembers = async (req, res) => {
     console.log("HIT: getMembers controller");
     try {
-        const members = await Member.find({}).sort({ createdAt: -1 });
-        console.log(`Found ${members.length} members`);
-        res.json(members);
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const search = req.query.search || '';
+        const statusFilter = req.query.status || 'all';
+
+        let query = {};
+        
+        if (statusFilter !== 'all') {
+            query.status = statusFilter;
+        }
+
+        if (search) {
+            query.$or = [
+                { firstName: { $regex: search, $options: 'i' } },
+                { lastName: { $regex: search, $options: 'i' } },
+                { memberId: { $regex: search, $options: 'i' } },
+                { mobile: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const totalCount = await Member.countDocuments(query);
+        const members = await Member.find(query)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        console.log(`Found ${members.length} members on page ${page}`);
+        res.json({
+            data: members,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            currentPage: page
+        });
     } catch (error) {
         console.error("Error fetching members:", error);
         res.status(500).json({ message: 'Error fetching members list.' });
@@ -351,5 +411,126 @@ export const verifyPublicMember = async (req, res) => {
     } catch (error) {
         console.error("Verification Error:", error);
         res.status(500).json({ message: 'Server Error during verification.' });
+    }
+};
+
+// @desc    Update member profile photo (Admin)
+// @route   PUT /api/membership/admin/member/:id/photo
+// @access  Public (Will be protected later)
+export const updateMemberPhoto = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const member = await Member.findById(id);
+
+        if (!member) {
+            return res.status(404).json({ message: 'Member not found' });
+        }
+
+        if (!req.files || !req.files.photo) {
+            return res.status(400).json({ message: 'No photo uploaded' });
+        }
+
+        const newPhotoUrl = req.files.photo[0].path.replace(/\\/g, '/');
+
+        // Capture the old URL before we mutate the document
+        const oldPhotoUrl = member.photoUrl;
+
+        member.photoUrl = newPhotoUrl;
+        await member.save();
+
+        // Optionally, delete the old photo from the filesystem to save space
+        if (oldPhotoUrl && oldPhotoUrl !== newPhotoUrl) {
+            // Need dynamic import or require for fs
+            import('fs').then(fs => {
+                import('path').then(path => {
+                    const oldPhotoPath = path.resolve(oldPhotoUrl);
+                    fs.unlink(oldPhotoPath, (err) => {
+                        if (err) {
+                            console.error(`Failed to delete old photo at ${oldPhotoPath}`, err);
+                        } else {
+                            console.log(`Deleted replaced photo: ${oldPhotoPath}`);
+                        }
+                    });
+                });
+            });
+        }
+
+        res.status(200).json({
+            message: 'Profile photo updated successfully',
+            photoUrl: newPhotoUrl
+        });
+
+    } catch (error) {
+        console.error('Update Photo Error:', error);
+        res.status(500).json({ message: 'Server error updating photo' });
+    }
+};
+
+// @desc    Download Member ID Card PDF (Admin / Public)
+// @route   GET /api/membership/admin/member/:id/id-card-pdf
+// @access  Public (Will be protected later)
+export const getMemberIdCardPdf = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const member = await Member.findById(id);
+
+        if (!member) {
+            return res.status(404).json({ message: 'Member not found' });
+        }
+
+        if (member.status !== 'approved') {
+            return res.status(400).json({ message: 'Member is not approved yet' });
+        }
+
+        // Dynamically import the email service to avoid circular dependency issues if any
+        const { generateIdCardPdf } = await import('../services/emailService.js');
+        const pdfBuffer = await generateIdCardPdf(member);
+
+        if (!pdfBuffer) {
+            return res.status(500).json({ message: 'Failed to generate PDF' });
+        }
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${member.memberId || 'member'}_ID_Card.pdf"`,
+            'Content-Length': pdfBuffer.length
+        });
+
+        res.end(pdfBuffer);
+
+    } catch (error) {
+        console.error('Fetch ID Card PDF Error:', error);
+        res.status(500).json({ message: 'Server error generating PDF' });
+    }
+};
+
+// @desc    Download Member ID Card HTML (Admin / Public)
+// @route   GET /api/membership/admin/member/:id/id-card-html
+// @access  Public (Will be protected later)
+export const getMemberIdCardHtml = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const member = await Member.findById(id);
+
+        if (!member) {
+            return res.status(404).json({ message: 'Member not found' });
+        }
+
+        if (member.status !== 'approved') {
+            return res.status(400).json({ message: 'Member is not approved yet' });
+        }
+
+        const { generateIdCardHtml } = await import('../services/emailService.js');
+        const htmlString = await generateIdCardHtml(member);
+
+        res.set({
+            'Content-Type': 'text/html'
+        });
+
+        res.send(htmlString);
+
+    } catch (error) {
+        console.error('Fetch ID Card HTML Error:', error);
+        res.status(500).json({ message: 'Server error generating HTML' });
     }
 };

@@ -25,14 +25,8 @@ const transporter = nodemailer.createTransport({
 });
 
 // Helper: Generate PDF Buffer for ID Card
-const generateIdCardPdf = async (member) => {
+export const generateIdCardHtml = async (member) => {
     try {
-        const browser = await puppeteer.launch({ 
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-        const page = await browser.newPage();
-
         // Icons as inline SVGs (Lucide) - Slightly larger for better PDF resolution
         const icons = {
             phone: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF6B00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
@@ -43,6 +37,7 @@ const generateIdCardPdf = async (member) => {
         // Read Logo Image as base64 with multiple path fallbacks
         let logoBase64 = '';
         let flagBase64 = '';
+        let sigBase64 = '';
         
         const tryReadImage = (fileName) => {
             const possiblePaths = [
@@ -84,6 +79,7 @@ const generateIdCardPdf = async (member) => {
 
         logoBase64 = await getBase64Image('abhmlogo.jpg');
         flagBase64 = await getBase64Image('abhmflag.png');
+        sigBase64 = await getBase64Image('signature.png');
 
         const htmlContent = `
         <!DOCTYPE html>
@@ -697,11 +693,7 @@ const generateIdCardPdf = async (member) => {
                     <div class="back-footer">
                         <div class="signature-section">
                             <div class="sig-box">
-                                <div class="sig-watermark">
-                                    <div style="transform:scale(0.8);">
-                                        ${icons.shield}
-                                    </div>
-                                </div>
+                                <img src="${sigBase64}" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); max-width:100%; max-height:100%; z-index:10; mix-blend-mode: multiply;" />
                             </div>
                             <span class="sig-label">Issuing Authority Signature</span>
                         </div>
@@ -717,6 +709,25 @@ const generateIdCardPdf = async (member) => {
         </body>
         </html>
         `;
+
+        return htmlContent;
+    } catch (error) {
+        console.error("HTML Generation Error:", error);
+        return null;
+    }
+};
+
+// Helper: Generate PDF Buffer for ID Card
+export const generateIdCardPdf = async (member) => {
+    try {
+        const browser = await puppeteer.launch({ 
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+
+        const htmlContent = await generateIdCardHtml(member);
+        if (!htmlContent) throw new Error("Could not generate HTML for PDF");
 
         await page.setContent(htmlContent);
         
