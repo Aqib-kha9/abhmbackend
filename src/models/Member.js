@@ -14,7 +14,7 @@ const memberSchema = new mongoose.Schema({
     emotionalArea: { type: String, required: true, trim: true }, // Interest Area
     familyMembersDetails: { type: String, trim: true }, // "Family Members" (Count or Names)
     aadhaarNumber: { type: String, required: true, trim: true, unique: true },
-    aadhaarCardUrl: { type: String }, // Path to uploaded Aadhaar card image
+    aadhaarCardUrl: { type: String, required: true }, // Path to uploaded Aadhaar card image
 
     // Contact Details
     mobile: { type: String, required: true, trim: true },
@@ -53,7 +53,7 @@ const memberSchema = new mongoose.Schema({
     // Official Details
     memberId: { type: String, unique: true, sparse: true }, // Generated upon approval
     designation: { type: String, default: 'Member' },
-    photoUrl: { type: String }, // Path to uploaded photo
+    photoUrl: { type: String, required: true }, // Path to uploaded photo
 
     // Payment Verification
     payment: {

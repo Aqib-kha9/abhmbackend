@@ -54,9 +54,13 @@ export const registerMember = async (req, res) => {
         }
 
         // Handle File Uploads
-        const photoPath = req.files['photo'] ? req.files['photo'][0].path.replace(/\\/g, "/") : null;
-        const aadhaarCardPath = req.files['aadhaarCard'] ? req.files['aadhaarCard'][0].path.replace(/\\/g, "/") : null;
-        const screenshotPath = req.files['paymentScreenshot'] ? req.files['paymentScreenshot'][0].path.replace(/\\/g, "/") : null;
+        const photoPath = req.files && req.files['photo'] ? req.files['photo'][0].path.replace(/\\/g, "/") : null;
+        const aadhaarCardPath = req.files && req.files['aadhaarCard'] ? req.files['aadhaarCard'][0].path.replace(/\\/g, "/") : null;
+        const screenshotPath = req.files && req.files['paymentScreenshot'] ? req.files['paymentScreenshot'][0].path.replace(/\\/g, "/") : null;
+
+        if (!photoPath || !aadhaarCardPath) {
+            return res.status(400).json({ message: 'Missing mandatory files: Profile Photo and Aadhaar Card are required.' });
+        }
 
         // Parse Addresses if they come as strings (from FormData)
         let parsedPresentAddress = presentAddress;
